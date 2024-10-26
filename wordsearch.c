@@ -121,11 +121,11 @@ void searchPuzzle(char **arr, char *word, int size)
 
     for (int i = 0; i < size; i++) 
     {
-        visited[i] = (int *)malloc(size * sizeof(int));
+        *(visited+i) = (int *)malloc(size * sizeof(int));
 
         for (int j = 0; j < size; j++) 
         {
-            visited[i][j] = 0;  
+            *(*(visited+i)+j) = 0;
         }
     }
 
@@ -145,7 +145,7 @@ void searchPuzzle(char **arr, char *word, int size)
                 // Free allocated memory for visited
                 for (int i = 0; i < size; i++) 
                 {
-                    free(visited[i]);
+                    free(*(visited+i));
                 }
 
                 free(visited);
@@ -157,7 +157,7 @@ void searchPuzzle(char **arr, char *word, int size)
     printf("Word not found!\n");
     // Free allocated memory for visited
     for (int i = 0; i < size; i++) {
-        free(visited[i]);
+        free(*(visited+i));
     }
     free(visited);
     free(path);
@@ -167,18 +167,18 @@ void searchPuzzle(char **arr, char *word, int size)
 int searchWord(char **arr, int size, char *word, int wordLen, int row, int col, int **visited, int index, int *path) 
 {
     // Check boundaries and if cell is already visited visted is 0 or 1
-    if (row < 0 || row >= size || col < 0 || col >= size || visited[row][col]) 
+    if (row < 0 || row >= size || col < 0 || col >= size || *(*(visited+row)+col)) 
     {
         return 0;
     }
 
     // Check if the current character matches
-    if (!compareChars(*(*(arr + row) + col), word[index])) {
+    if (!compareChars(*(*(arr + row) + col), *(word+index))) {
         return 0;
     }
 
     // Mark the cell as visited and update the path when charachter is found
-    visited[row][col] = 1;
+    *(*(visited+row)+col) = 1;
     *(path + row * size + col) = index + 1;  // Store the step number in the path
 
     // If all characters are found
@@ -188,22 +188,41 @@ int searchWord(char **arr, int size, char *word, int wordLen, int row, int col, 
     }
 
     // Search in all 8 possible directions
-    int directions[8][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    int **directions = (int **)malloc(8 * sizeof(int *));
+    for (int i = 0; i < 8; i++) {
+        *(directions + i) = (int *)malloc(2 * sizeof(int));
+    }
 
-    for (int d = 0; d < 8; d++) 
+    
+    int *values = (int *)malloc(16 * sizeof(int));  
+    *(values + 0) = -1; *(values + 1) = 0;
+    *(values + 2) = 1;  *(values + 3) = 0;
+    *(values + 4) = 0;  *(values + 5) = -1;
+    *(values + 6) = 0;  *(values + 7) = 1;
+    *(values + 8) = -1; *(values + 9) = -1;
+    *(values + 10) = -1; *(values + 11) = 1;
+    *(values + 12) = 1;  *(values + 13) = -1;
+    *(values + 14) = 1;  *(values + 15) = 1;
+
+    for (int i = 0; i < 8; i++) 
     {
-        //get this in pointer notation
-        int newRow = row + directions[d][0];
-        int newCol = col + directions[d][1];
+        *(*(directions + i) + 0) = *(values + 2 * i);     // Row offset
+        *(*(directions + i) + 1) = *(values + 2 * i + 1); // Column offset
+    }
 
-        if (searchWord(arr, size, word, wordLen, newRow, newCol, visited, index + 1, path)) 
-        {
+    
+    for (int i = 0; i < 8; i++) 
+    {
+        int newRow = row + *(*(directions + i) + 0);
+        int newCol = col + *(*(directions + i) + 1);
+
+        if (searchWord(arr, size, word, wordLen, newRow, newCol, visited, index + 1, path)) {
             return 1;
         }
     }
 
     // Backtrack if the word cannot be formed
-    visited[row][col] = 0;
+    *(*(visited+row)+col) = 0;
     *(path + row * size + col) = 0;
 
     return 0;
