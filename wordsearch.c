@@ -9,12 +9,14 @@ void printPuzzle(char** arr, int size);
 void printPath(int *path, int wordLen, int size);
 
 void searchPuzzle(char** arr, char* word, int size);
-int searchWord(char **arr, int size, char *word, int wordLen, int row, int col, int **visited, int index, int *path);
-int searchFromCell(char **arr, int size, char *word, int row, int col, int **visited, int *path);
+int recursiveSearch(char **arr, int size, char *word, int wordLen, int row, int col, int index, int *path);
+int searchFromCell(char **arr, int size, char *word, int row, int col, int *path);
 
-int compareChars(char a, char b) {
+int compareChars(char a, char b) 
+{
     if (a >= 'A' && a <= 'Z') a = a + ('a' - 'A');  // Convert 'A'-'Z' to 'a'-'z'
     if (b >= 'A' && b <= 'Z') b = b + ('a' - 'A');  // Convert 'A'-'Z' to 'a'-'z'
+
     return a == b;
 }
 
@@ -105,10 +107,13 @@ void searchPuzzle(char **arr, char *word, int size)
 {
 
     int wordLen = 0;
-    for (char *ptr = word; *ptr != '\0'; ptr++) 
-        wordLen++;
 
-    // 1D array of interger pointers for path n*n
+    for (char *ptr = word; *ptr != '\0'; ptr++) 
+    {
+        wordLen++;
+    }
+
+    //1D array of interger pointers for path n*n
     int *path = (int *)malloc(size * size * sizeof(int));
 
     for (int i = 0; i < size * size; i++) 
@@ -116,80 +121,60 @@ void searchPuzzle(char **arr, char *word, int size)
         *(path + i) = 0;
     }
     
-    //2D double pointer array temp
-    int **visited = (int **)malloc(size * sizeof(int *));
-
-    for (int i = 0; i < size; i++) 
-    {
-        *(visited+i) = (int *)malloc(size * sizeof(int));
-
-        for (int j = 0; j < size; j++) 
-        {
-            *(*(visited+i)+j) = 0;
-        }
-    }
+    //2D double pointer array temp UPDATE NOT NEEDED DIDNT READ INSTUCTIONS BACKTRACTING IS ALLOWED
+    
 
     // Loop through each cell in the arr
+    // i = row n = col
     for (int i = 0; i < size; i++) 
     {
         for (int n = 0; n < size; n++) 
         {
-            int rowIndex = i;
-            int colIndex = n;
 
-            if (searchFromCell(arr, size, word, rowIndex, colIndex, visited, path)) 
+            if (searchFromCell(arr, size, word, i, n, path)) 
             {
                 printf("Word found!\n");
                 printPath(path, wordLen, size);  // Print the path if found
 
-                // Free allocated memory for visited
-                for (int i = 0; i < size; i++) 
-                {
-                    free(*(visited+i));
-                }
-
-                free(visited);
                 free(path);
                 return;
             }
         }
     }
+
     printf("Word not found!\n");
-    // Free allocated memory for visited
-    for (int i = 0; i < size; i++) {
-        free(*(visited+i));
-    }
-    free(visited);
+
+
     free(path);
 }
 
 
-int searchWord(char **arr, int size, char *word, int wordLen, int row, int col, int **visited, int index, int *path) 
+int recursiveSearch(char **arr, int size, char *word, int wordLen, int row, int col, int index, int *path) 
 {
-    // Check boundaries and if cell is already visited visted is 0 or 1
-    if (row < 0 || row >= size || col < 0 || col >= size || *(*(visited+row)+col)) 
+    //check boundaries
+    if (row < 0 || row >= size || col < 0 || col >= size) 
     {
         return 0;
     }
 
-    // Check if the current character matches
     if (!compareChars(*(*(arr + row) + col), *(word+index))) {
         return 0;
     }
 
-    // Mark the cell as visited and update the path when charachter is found
-    *(*(visited+row)+col) = 1;
-    *(path + row * size + col) = index + 1;  // Store the step number in the path
+    // update the path when charachter is found
+    *(path + row * size + col) = index + 1;
 
-    // If all characters are found
+    // break
     if (index == wordLen - 1) 
     {
         return 1;
     }
 
-    // Search in all 8 possible directions
+   //array to store differnt searching directions
     int **directions = (int **)malloc(8 * sizeof(int *));
-    for (int i = 0; i < 8; i++) {
+
+    for (int i = 0; i < 8; i++) 
+    {
         *(directions + i) = (int *)malloc(2 * sizeof(int));
     }
 
@@ -204,32 +189,33 @@ int searchWord(char **arr, int size, char *word, int wordLen, int row, int col, 
     *(values + 12) = 1;  *(values + 13) = -1;
     *(values + 14) = 1;  *(values + 15) = 1;
 
+    //fill directions with combos of -1,0,1 exept for 0,0
     for (int i = 0; i < 8; i++) 
     {
-        *(*(directions + i) + 0) = *(values + 2 * i);     // Row offset
-        *(*(directions + i) + 1) = *(values + 2 * i + 1); // Column offset
+        //row
+        *(*(directions + i) + 0) = *(values + 2 * i);
+        //column
+        *(*(directions + i) + 1) = *(values + 2 * i + 1);
     }
 
-    
+    //basically kind of starts 8 processes that end themselfs if they dont find a mathcing letter
     for (int i = 0; i < 8; i++) 
     {
         int newRow = row + *(*(directions + i) + 0);
         int newCol = col + *(*(directions + i) + 1);
 
-        if (searchWord(arr, size, word, wordLen, newRow, newCol, visited, index + 1, path)) {
+        if (recursiveSearch(arr, size, word, wordLen, newRow, newCol, index + 1, path)) {
             return 1;
         }
     }
 
-    // Backtrack if the word cannot be formed
-    *(*(visited+row)+col) = 0;
     *(path + row * size + col) = 0;
 
     return 0;
 }
 
-// Start search from a given cell
-int searchFromCell(char **arr, int size, char *word, int row, int col, int **visited, int *path) 
+//start search
+int searchFromCell(char **arr, int size, char *word, int row, int col, int *path) 
 {
     int wordLen = 0;
     for (char *ptr = word; *ptr != '\0'; ptr++)
@@ -237,11 +223,10 @@ int searchFromCell(char **arr, int size, char *word, int row, int col, int **vis
         wordLen++;
     }
     
-    return searchWord(arr, size, word, wordLen, row, col, visited, 0, path);
+    return recursiveSearch(arr, size, word, wordLen, row, col, 0, path);
 }
 
-// Function to print the search path
-// Print the path array
+
 void printPath(int *path, int wordLen, int size) 
 {
     for (int i = 0; i < size; i++) 
